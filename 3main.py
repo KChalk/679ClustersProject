@@ -26,7 +26,8 @@ def main():
 	sc = spark.sparkContext
 
 # filter
-	postRDD = filterPosts(file, sc, spark)
+#	postRDD = filterPosts(file, sc, spark)
+	postRDD = filterPostsAllSubs(file, sc, spark)
 
 #dicts
 	dictionaryFname="LIWC2007_updated.dic"
@@ -63,15 +64,23 @@ def filterPosts(filename, sc, ss):
 	allposts = ss.read.json(filename)
 	subreddits=set(['depression', 'Anxiety', 'SuicideWatch','HomeImprovement','tipofmytongue','dogs','jobs','r4r','electronic_cigarette','asktrp','keto','trees','relationships','asktransgender','askgaybros','Advice','relationship_advice','CasualConversation','Drugs','teenagers','MGTOW','TwoXChromosomes','Asthma', 'diabetes', 'cancer','reddit.com','parenting', 'raisedbynarcissists','stopdrinking','ADHD'])
 	
-#	subRposts = allposts.filter(allposts['subreddit'].isin(subreddits) & allposts['is_self'] == True)
+	subRposts = allposts.filter(allposts['subreddit'].isin(subreddits) & allposts['is_self'] == True)
 	
-	subRposts = allposts.filter(allposts['is_self'] == True)
 	splitlenUDF = udf(splitlen, IntegerType())
 	bettercols=subRposts.select('id','subreddit','selftext',splitlenUDF('selftext').alias("wordcount"))
 	longposts = bettercols.filter(bettercols['wordcount'] >= 100) 
 	return longposts
 
 
+def filterPostsAllSubs(filename, sc, ss):
+	allposts = ss.read.json(filename)
+
+	subRposts = allposts.filter(allposts['is_self'] == True)
+	splitlenUDF = udf(splitlen, IntegerType())
+	bettercols=subRposts.select('id','subreddit','selftext',splitlenUDF('selftext').alias("wordcount"))
+	longposts = bettercols.filter(bettercols['wordcount'] >= 100) 
+	return longposts
+	
 def getdicts(filename):
 	boundarycount=0
 	dictdict={}
@@ -139,13 +148,14 @@ def calculatePosts2(posts, sc, ss):
 	grouped = tidyDF.groupBy(tidyDF['subreddit'])
 	counts = grouped.agg({"*": "count", "wordcount": "sum", 'absolutist': "sum",'funct' : "sum", 'pronoun' : "sum", 'ppron' : "sum", 'i' : "sum", 'we' : "sum", 'you' : "sum", 'shehe' : "sum", 'they' : "sum", 'ipron' : "sum", 'article' : "sum", 'verb' : "sum", 'auxverb' : "sum", 'past' : "sum", 'present' : "sum", 'future' : "sum", 'adverb' : "sum", 'preps' : "sum", 'conj' : "sum", 'negate' : "sum", 'quant' : "sum", 'number' : "sum", 'swear' : "sum", 'social' : "sum", 'family' : "sum", 'friend' : "sum", 'humans' : "sum", 'affect' : "sum", 'posemo' : "sum", 'negemo' : "sum", 'anx' : "sum", 'anger' : "sum", 'sad' : "sum", 'cogmech' : "sum", 'insight' : "sum", 'cause' : "sum", 'discrep' : "sum", 'tentat' : "sum", 'certain' : "sum", 'inhib' : "sum", 'incl' : "sum", 'excl' : "sum", 'percept' : "sum", 'see' : "sum", 'hear' : "sum", 'feel' : "sum", 'bio' : "sum", 'body' : "sum", 'health' : "sum", 'sexual' : "sum", 'ingest' : "sum", 'relativ' : "sum", 'motion' : "sum", 'space' : "sum", 'time' : "sum", 'work' : "sum", 'achieve' : "sum", 'leisure' : "sum", 'home' : "sum", 'money' : "sum", 'relig' : "sum", 'death' : "sum", 'assent' : "sum", 'nonfl' : "sum", 'filler' : "sum"})
 	
+	print('finished group')
 	tidyfreqDF=counts
 	for dict in DICTIONARIES['dictnames']:
 		dictname=DICTIONARIES['dictnames'][dict]
 		tidyfreqDF=tidyfreqDF.withColumn(dictname+'freq', tidyfreqDF['sum('+dictname+')']/tidyfreqDF['sum(wordcount)'])
 		tidyfreqDF=tidyfreqDF.drop(tidyfreqDF['sum('+dictname+')'])
 		
-		print('added',dict)
+		print('added part 2',dict)
 
 	
 	return tidyfreqDF
