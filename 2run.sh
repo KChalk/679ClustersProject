@@ -5,6 +5,7 @@ module load hadoop
 spark-submit \
     --master yarn \
     --num-executors 100 \
+	--executor-memory 6g \
 	3main.py
 	
 hadoop fs -getmerge bigoutput.csv bigoutput.csv
