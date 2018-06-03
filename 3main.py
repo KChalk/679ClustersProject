@@ -45,23 +45,27 @@ def main():
 
 # filter
 #	postRDD = filterPosts(file, sc, spark)
+	print('\n\n\n starting read and filter')
 	postRDD = filterPostsAllSubs(file, sc, spark)
 
 #dicts
 	dictionaryFname="LIWC2007_updated.dic"
 	global DICTIONARIES
+	print('\n\n\n Starting dict read')
 	DICTIONARIES=getdicts("LIWC2007_updated.dic")
 	
 # freq
+	print('\n\n\n starting freq counts')
 	abscounts = calculatePosts2(postRDD, sc, spark)
 	
 	print('\n\n\n')
 	abscounts.printSchema()
+	print('abscunts num parttions',abscounts.rdd.getNumPartitions())
 	print(abscounts.count())
 	print('\n\n\n')
 
 # write
-	abscounts.write.csv('bigoutput.csv', header=True)
+	abscounts.coalesce(100).write.csv('bigoutput.csv', header=True)
 
 #	collected=abscounts.collect()
 	
@@ -84,8 +88,12 @@ def mysplit(s):
 
 def filterPosts(filename, sc, ss):
 	allposts = ss.read.json(filename)
+
+        print('\n\n\n')
+	print('all posts num partiations', allposts.rdd.getNumPartitions())
 	subreddits=set(['depression', 'Anxiety', 'SuicideWatch','HomeImprovement','tipofmytongue','dogs','jobs','r4r','electronic_cigarette','asktrp','keto','trees','relationships','asktransgender','askgaybros','Advice','relationship_advice','CasualConversation','Drugs','teenagers','MGTOW','TwoXChromosomes','Asthma', 'diabetes', 'cancer','reddit.com','parenting', 'raisedbynarcissists','stopdrinking','ADHD'])
-	
+	print('\n\n\n')
+
 	#select posts from desired subreddits and remove links to external content
 	subRposts = allposts.filter(allposts['subreddit'].isin(subreddits) & allposts['is_self'] == True)
 	
@@ -101,7 +109,10 @@ def filterPosts(filename, sc, ss):
 
 def filterPostsAllSubs(filename, sc, ss):
 	allposts = ss.read.json(filename)
-	
+	print('\n\n\n')
+        print('all posts num partiations', allposts.rdd.getNumPartitions())
+        print('\n\n\n')
+
 	#remove links to external content from data
 	subRposts = allposts.filter(allposts['is_self'] == True) 
 	splitlenUDF = udf(splitlen, IntegerType()) 
@@ -189,7 +200,7 @@ def calculatePosts2(posts, sc, ss):
 	grouped = tidyDF.groupBy(tidyDF['subreddit'])
 	counts = grouped.agg({"*": "count", "wordcount": "sum", 'absolutist': "sum",'funct' : "sum", 'pronoun' : "sum", 'ppron' : "sum", 'i' : "sum", 'we' : "sum", 'you' : "sum", 'shehe' : "sum", 'they' : "sum", 'ipron' : "sum", 'article' : "sum", 'verb' : "sum", 'auxverb' : "sum", 'past' : "sum", 'present' : "sum", 'future' : "sum", 'adverb' : "sum", 'preps' : "sum", 'conj' : "sum", 'negate' : "sum", 'quant' : "sum", 'number' : "sum", 'swear' : "sum", 'social' : "sum", 'family' : "sum", 'friend' : "sum", 'humans' : "sum", 'affect' : "sum", 'posemo' : "sum", 'negemo' : "sum", 'anx' : "sum", 'anger' : "sum", 'sad' : "sum", 'cogmech' : "sum", 'insight' : "sum", 'cause' : "sum", 'discrep' : "sum", 'tentat' : "sum", 'certain' : "sum", 'inhib' : "sum", 'incl' : "sum", 'excl' : "sum", 'percept' : "sum", 'see' : "sum", 'hear' : "sum", 'feel' : "sum", 'bio' : "sum", 'body' : "sum", 'health' : "sum", 'sexual' : "sum", 'ingest' : "sum", 'relativ' : "sum", 'motion' : "sum", 'space' : "sum", 'time' : "sum", 'work' : "sum", 'achieve' : "sum", 'leisure' : "sum", 'home' : "sum", 'money' : "sum", 'relig' : "sum", 'death' : "sum", 'assent' : "sum", 'nonfl' : "sum", 'filler' : "sum"})
 	
-	counts = counts.filter(counts['count(1)']>=1000)
+	counts = counts.filter(counts['count(1)']>=100)
 
 	print('finished group with filter' )
 
