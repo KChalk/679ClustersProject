@@ -23,23 +23,21 @@ def main():
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-	size = "large"  # medium or large
-	if size == "large":
-		file = "s_filtered_posts.csv
-"
-	elif size == "medium":
-		file = "RS_2017_11.bz2"
-	else:
-		file = "file:///g/chalkley/Winter18/679Clusters/Project/redditexcerpt.txt"
+    size = "medium"  # medium or large
+    if size == "large":
+        file = "file:///g/chalkley/Winter18/679Clusters/Project/l_filtered_posts.csv"
+        output="l_output.csv"
+    elif size == "medium":
+	    file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
+        output="m_output.csv"
+
+    else:
+		file = "file:///g/chalkley/Winter18/679Clusters/Project/s_filtered_posts.csv"
+        output="s_output.csv"
+
+#		file = "file:///g/chalkley/Winter18/679Clusters/Project/redditexcerpt.txt"
 
 	sc = spark.sparkContext
-    if reloadTexts:
-    # filter
-    #	postRDD = filterPosts(file, sc, spark)
-        print('\n\n\n starting read and filter')
-        postRDD = filterPostsAllSubs(file, sc, spark)
-        ## Save post RDD
-        postRDD.write.csv('filtered_posts.csv', header=True)
 
 
 #dicts
@@ -51,6 +49,7 @@ def main():
     ## Use as actual broadcast variable
 
 # freq
+	postRDD = ss.read.csv(file)
 	print('\n\n\n starting freq counts')
 	abscounts = calculatePosts2(postRDD, sc, spark)
 
@@ -62,7 +61,7 @@ def main():
         print('\n\n\n')
 
 # write
-	abscounts.coalesce(100).write.csv('bigoutput.csv', header=True)
+	abscounts.coalesce(100).write.csv(output, header=True)
 
 #	collected=abscounts.collect()
 	
@@ -75,51 +74,6 @@ def main():
 #			this_row = [row[colname].encode("utf-8") for colname in abscounts.columns()]
 #			writer.writerow(this_row)
 					
-def splitlen(s):
-	tokens=s.split()
-	return len(tokens)
- 
-def mysplit(s):
-	tokens=s.split()
-	return tokens
-
-def filterPosts(filename, sc, ss):
-	allposts = ss.read.json(filename)
-    print('\n\n\n')
-	print('all posts num partiations', allposts.rdd.getNumPartitions())
-	subreddits=set(['depression', 'Anxiety', 'SuicideWatch','HomeImprovement','tipofmytongue','dogs','jobs','r4r','electronic_cigarette','asktrp','keto','trees','relationships','asktransgender','askgaybros','Advice','relationship_advice','CasualConversation','Drugs','teenagers','MGTOW','TwoXChromosomes','Asthma', 'diabetes', 'cancer','reddit.com','parenting', 'raisedbynarcissists','stopdrinking','ADHD'])
-	print('\n\n\n')
-
-	#select posts from desired subreddits and remove links to external content
-	subRposts = allposts.filter(allposts['subreddit'].isin(subreddits) & allposts['is_self'] == True)
-	
-	splitlenUDF = udf(splitlen, IntegerType())
-
-	#select desired columns and create wordcount based on simple whitespace splitting
-	bettercols=subRposts.select('id','subreddit','selftext',splitlenUDF('selftext').alias("wordcount"))
-
-	#remove posts of less than 100 words
-	longposts = bettercols.filter(bettercols['wordcount'] >= 100) 
-	return longposts
-
-
-def filterPostsAllSubs(filename, sc, ss):
-	allposts = ss.read.json(filename)
-	print('\n\n\n')
-        print('all posts num partiations', allposts.rdd.getNumPartitions())
-        print('\n\n\n')
-
-	#remove links to external content from data
-	subRposts = allposts.filter(allposts['is_self'] == True) 
-	splitlenUDF = udf(splitlen, IntegerType()) 
-	
-	#select desired columns and create wordcount based on simple whitespace splitting
-	bettercols=subRposts.select('id','subreddit','selftext',splitlenUDF('selftext').alias("wordcount"))
-	
-	#remove posts of less and 100 words
-	longposts = bettercols.filter(bettercols['wordcount'] >= 100) 
-
-	return longposts
 	
 def getdicts(filename):
 	boundarycount=0
