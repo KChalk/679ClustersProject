@@ -23,7 +23,7 @@ def main():
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-	size = "small"  # medium or large
+	size = "medium"  # medium or large
 	if size == "large":
 		file = "RS_full_corpus.bz2"
 		output="l_filtered_posts.csv"
