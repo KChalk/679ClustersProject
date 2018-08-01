@@ -48,7 +48,7 @@ def main():
 	## Use as actual broadcast variable
 
 # freq
-	postRDD = ss.read.csv(file)
+	postRDD = spark.read.csv(file)
 	print('\n\n\n starting freq counts')
 	abscounts = calculatePosts2(postRDD, sc, spark)
 
