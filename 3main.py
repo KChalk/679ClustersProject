@@ -89,7 +89,7 @@ def mysplit(s):
 def filterPosts(filename, sc, ss):
 	allposts = ss.read.json(filename)
 
-        print('\n\n\n')
+    print('\n\n\n')
 	print('all posts num partiations', allposts.rdd.getNumPartitions())
 	subreddits=set(['depression', 'Anxiety', 'SuicideWatch','HomeImprovement','tipofmytongue','dogs','jobs','r4r','electronic_cigarette','asktrp','keto','trees','relationships','asktransgender','askgaybros','Advice','relationship_advice','CasualConversation','Drugs','teenagers','MGTOW','TwoXChromosomes','Asthma', 'diabetes', 'cancer','reddit.com','parenting', 'raisedbynarcissists','stopdrinking','ADHD'])
 	print('\n\n\n')

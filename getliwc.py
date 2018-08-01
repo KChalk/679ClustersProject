@@ -17,23 +17,23 @@ import csv
 
  
 def main():
-    spark = SparkSession \
+	spark = SparkSession \
 		.builder \
 		.appName("Reddit:get liwc") \
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-    size = "medium"  # medium or large
-    if size == "large":
-        file = "file:///g/chalkley/Winter18/679Clusters/Project/l_filtered_posts.csv"
-        output="l_output.csv"
-    elif size == "medium":
-	    file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
-        output="m_output.csv"
+	size = "medium"  # medium or large
+	if size == "large":
+		file = "file:///g/chalkley/Winter18/679Clusters/Project/l_filtered_posts.csv"
+		output="l_output.csv"
+	elif size == "medium":
+		file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
+		output="m_output.csv"
 
-    else:
+	else:
 		file = "file:///g/chalkley/Winter18/679Clusters/Project/s_filtered_posts.csv"
-        output="s_output.csv"
+		output="s_output.csv"
 
 #		file = "file:///g/chalkley/Winter18/679Clusters/Project/redditexcerpt.txt"
 
@@ -41,24 +41,23 @@ def main():
 
 
 #dicts
-	dictionaryFname="LIWC2007_updated.dic"
 	global DICTIONARIES
 	print('\n\n\n Starting dict read')
 	DICTIONARIES=getdicts("LIWC2007_updated.dic")
 	## Save DICTIONARIES?
-    ## Use as actual broadcast variable
+	## Use as actual broadcast variable
 
 # freq
 	postRDD = ss.read.csv(file)
 	print('\n\n\n starting freq counts')
 	abscounts = calculatePosts2(postRDD, sc, spark)
 
-    if False:
-        print('\n\n\n')
-        abscounts.printSchema()
-        print('abscunts num parttions',abscounts.rdd.getNumPartitions())
-        print(abscounts.count())
-        print('\n\n\n')
+	if False:
+		print('\n\n\n')
+		abscounts.printSchema()
+		print('abscunts num parttions',abscounts.rdd.getNumPartitions())
+		print(abscounts.count())
+		print('\n\n\n')
 
 # write
 	abscounts.coalesce(100).write.csv(output, header=True)
