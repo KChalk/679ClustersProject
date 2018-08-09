@@ -23,7 +23,7 @@ def main():
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-	size = "medium"  # medium or large
+	size = "large"  # medium or large
 	if size == "large":
 		file = "RS_full_corpus.bz2"
 		output="l_filtered_posts.csv"
@@ -40,7 +40,7 @@ def main():
 	print('\n\n\n starting read and filter')
 	postRDD = filterPostsAllSubs(file, sc, spark)
 	## Save post RDD
-	postRDD.write.csv(output, header=True)
+	postRDD.write.parquet(output, mode='overwrite')
 
 
 					
