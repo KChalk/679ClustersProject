@@ -23,12 +23,13 @@ def main():
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-	size = "medium"  # medium or large
+	size = "large"  # medium or large
 	if size == "large":
-		file = "file:///g/chalkley/Winter18/679Clusters/Project/l_filtered_posts.csv"
+		file = "l_filtered_posts.csv"
 		output="l_output.csv"
 	elif size == "medium":
-		file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
+		file = "m_filtered_posts.csv"
+		#file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
 		output="m_output.csv"
 
 	else:
@@ -48,8 +49,10 @@ def main():
 	## Use as actual broadcast variable
 
 # freq
-	postRDD = spark.read.csv(file, header=True)
-	print('\n\n\n starting freq counts')
+	postRDD = spark.read.parquet(file)
+#	postRDD.dtypes=[('id','string'),('subreddit','string'),('selftext','string'),('wordcount','bigint')]
+	print('\n\n\n dtypes:')
+	print(postRDD.dtypes, 'starting freq counts')
 	abscounts = calculatePosts2(postRDD, sc, spark)
 
 	if False:
@@ -60,8 +63,8 @@ def main():
 		print('\n\n\n')
 
 # write
-	abscounts.coalesce(100).write.csv(output, header=True)
-
+	#abscounts.write.csv(output, header=True)
+	abscounts.write.parquet(output, mode='overwrite')
 #	collected=abscounts.collect()
 	
 #	print('collected')	
@@ -109,12 +112,16 @@ def getdicts(filename):
 	print('completed get dicts')
 	return dictdict
 
+def mysplit(s):
+	tokens=s.split()
+	return tokens
+
 
 def getfreqs(text): 
+#	text=str(text)
 	counts={'0':0,'1':0, '2':0, '3':0,'4':0,'5':0,'6':0,'7':0,'8':0,'9':0,'10':0,'11':0,'12':0,'13':0,'14':0,'15':0,'16':0,'17':0,'18':0,'19':0,'20':0,'21':0,'22':0,'121':0,'122':0,'123':0,'124':0,'125':0,'126':0,'127':0,'128':0,'129':0,'130':0,'131':0,'132':0,'133':0,'134':0,'135':0,'136':0,'137':0,'138':0,'139':0,'140':0,'141':0,'142':0,'143':0,'146':0,'147':0,'148':0,'149':0,'150':0,'250':0,'251':0,'252':0,'253':0,'354':0,'355':0,'356':0,'357':0,'358':0,'359':0,'360':0,'462':0,'463':0,'464':0}
-	words=text.split()
 
-	for word in words:
+	for word in text:
 		word=word.lower()
 		i=len(word)
 		while i>0:
@@ -130,9 +137,13 @@ def getfreqs(text):
 
 def calculatePosts2(posts, sc, ss):
 	getfreqsUDF = udf(getfreqs, MapType(StringType(), IntegerType()))
-	
+	splitUDF = udf(mysplit, IntegerType())
+	print('\n\n\n dtypes inside calc posts')
+	print(posts.dtypes)
+	posts=posts.withColumn('splittext',splitUDF('selftext'))
+
 	#count words per dictionary
-	countdict = posts.withColumn("counts", getfreqsUDF('selftext'))
+	countdict = posts.withColumn("counts", getfreqsUDF('splittext'))
 	
 	#initialize new df without self text
 	tidyDF=countdict.select('id','subreddit','wordcount','counts')
@@ -151,8 +162,11 @@ def calculatePosts2(posts, sc, ss):
 	counts = grouped.agg({"*": "count", "wordcount": "sum", 'absolutist': "sum",'funct' : "sum", 'pronoun' : "sum", 'ppron' : "sum", 'i' : "sum", 'we' : "sum", 'you' : "sum", 'shehe' : "sum", 'they' : "sum", 'ipron' : "sum", 'article' : "sum", 'verb' : "sum", 'auxverb' : "sum", 'past' : "sum", 'present' : "sum", 'future' : "sum", 'adverb' : "sum", 'preps' : "sum", 'conj' : "sum", 'negate' : "sum", 'quant' : "sum", 'number' : "sum", 'swear' : "sum", 'social' : "sum", 'family' : "sum", 'friend' : "sum", 'humans' : "sum", 'affect' : "sum", 'posemo' : "sum", 'negemo' : "sum", 'anx' : "sum", 'anger' : "sum", 'sad' : "sum", 'cogmech' : "sum", 'insight' : "sum", 'cause' : "sum", 'discrep' : "sum", 'tentat' : "sum", 'certain' : "sum", 'inhib' : "sum", 'incl' : "sum", 'excl' : "sum", 'percept' : "sum", 'see' : "sum", 'hear' : "sum", 'feel' : "sum", 'bio' : "sum", 'body' : "sum", 'health' : "sum", 'sexual' : "sum", 'ingest' : "sum", 'relativ' : "sum", 'motion' : "sum", 'space' : "sum", 'time' : "sum", 'work' : "sum", 'achieve' : "sum", 'leisure' : "sum", 'home' : "sum", 'money' : "sum", 'relig' : "sum", 'death' : "sum", 'assent' : "sum", 'nonfl' : "sum", 'filler' : "sum"})
 	
 	counts = counts.filter(counts['count(1)']>=100)
+	counts = counts.withColumn('postcounts',counts['count(1)']).drop('count(1)')
 
-	print('finished group with filter' )
+
+	print('\n\n\n finished group with filter' )
+	print(counts.dtypes)
 
 	#initialize new df
 	tidyfreqDF=counts
@@ -167,9 +181,13 @@ def calculatePosts2(posts, sc, ss):
 		
 		print('added part 2',dict)
 
+        tidyfreqDF = tidyfreqDF.withColumn('wordsum',tidyfreqDF['sum(wordcount)']).drop('sum(wordcount)')
+
 	#return DF of 111k rows (subreddits) by 60 columns (per dict freqs)
 	return tidyfreqDF
 
 if __name__ == "__main__":
 	main()
  
+	bettercols=subRposts.select('id','subreddit','selftext',splitlenUDF('selftext').alias("wordcount"))
+
