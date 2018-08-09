@@ -9,13 +9,13 @@ module load hadoop
 #	filterposts.py
 	
 
- hadoop fs -rm -r l_output.csv
+hadoop fs -rm -r l_output.csv
 #hadoop fs -rm -r m_output.csv
 #hadoop fs -rm -r s_output.csv
 
 spark-submit \
     --master yarn \
-    --num-executors 100 \
+    --num-executors 200 \
 	--executor-memory 14g \
 	getliwc.py
 hadoop fs -getmerge l_output.csv l_output.csv

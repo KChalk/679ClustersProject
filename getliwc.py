@@ -42,9 +42,10 @@ def main():
 
 
 #dicts
-	global DICTIONARIES
 	print('\n\n\n Starting dict read')
 	DICTIONARIES=getdicts("LIWC2007_updated.dic")
+	broadcastDicts=sc.broadcast(DICTIONARIES)
+	
 	## Save DICTIONARIES?
 	## Use as actual broadcast variable
 
@@ -151,7 +152,7 @@ def calculatePosts2(posts, sc, ss):
 	#move counts from 'counts' column of dicts to wide columns
 	
 	for dict in DICTIONARIES['dictnames']:
-		tidyDF=tidyDF.withColumn(DICTIONARIES['dictnames'][dict], tidyDF['counts'][dict]) 
+		tidyDF=tidyDF.withColumn(broadcastDicts['dictnames'][dict], tidyDF['counts'][dict]) 
 		print('added',dict) 
 	
 	#drop 'counts' column
@@ -172,16 +173,16 @@ def calculatePosts2(posts, sc, ss):
 	tidyfreqDF=counts
 
 	#convert counts to frequencies
-	for dict in DICTIONARIES['dictnames']:
-		dictname=DICTIONARIES['dictnames'][dict]
+	for dict in broadcastDicts['dictnames']:
+		dictname=broadcastDicts['dictnames'][dict]
 
 		tidyfreqDF=tidyfreqDF.withColumn(dictname+'freq', tidyfreqDF['sum('+dictname+')']/tidyfreqDF['sum(wordcount)'])
 
 		tidyfreqDF=tidyfreqDF.drop(tidyfreqDF['sum('+dictname+')'])
 		
 		print('added part 2',dict)
-
-        tidyfreqDF = tidyfreqDF.withColumn('wordsum',tidyfreqDF['sum(wordcount)']).drop('sum(wordcount)')
+		
+		tidyfreqDF = tidyfreqDF.withColumn('wordsum',tidyfreqDF['sum(wordcount)']).drop('sum(wordcount)')
 
 	#return DF of 111k rows (subreddits) by 60 columns (per dict freqs)
 	return tidyfreqDF
