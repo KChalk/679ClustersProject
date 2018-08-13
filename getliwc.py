@@ -14,7 +14,7 @@ from pyspark.sql.functions import udf
 from pyspark.sql.types import IntegerType, ArrayType, MapType, StringType
 from collections import defaultdict
 import csv
-
+#from functools import partial
  
 def main():
 	spark = SparkSession \
@@ -23,60 +23,33 @@ def main():
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-	size = "large"  # medium or large
+	size = "medium"  # medium or large
 	if size == "large":
 		file = "l_filtered_posts.csv"
-		output="l_output.csv"
+		output="l_output"
 	elif size == "medium":
 		file = "m_filtered_posts.csv"
 		#file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
-		output="m_output.csv"
+		output="m_output"
 
 	else:
 		file = "file:///g/chalkley/Winter18/679Clusters/Project/s_filtered_posts.csv"
-		output="s_output.csv"
-
-#		file = "file:///g/chalkley/Winter18/679Clusters/Project/redditexcerpt.txt"
+		output="s_output"
 
 	sc = spark.sparkContext
 
 
 #dicts
-	print('\n\n\n Starting dict read')
+	global DICTIONARIES
 	DICTIONARIES=getdicts("LIWC2007_updated.dic")
 	broadcastDicts=sc.broadcast(DICTIONARIES)
-	
-	## Save DICTIONARIES?
-	## Use as actual broadcast variable
 
 # freq
 	postRDD = spark.read.parquet(file)
-#	postRDD.dtypes=[('id','string'),('subreddit','string'),('selftext','string'),('wordcount','bigint')]
-	print('\n\n\n dtypes:')
-	print(postRDD.dtypes, 'starting freq counts')
-	abscounts = calculatePosts2(postRDD, sc, spark)
+	abscounts = calculatePosts2(postRDD, sc, spark, broadcastDicts)
 
-	if False:
-		print('\n\n\n')
-		abscounts.printSchema()
-		print('abscunts num parttions',abscounts.rdd.getNumPartitions())
-		print(abscounts.count())
-		print('\n\n\n')
-
-# write
-	#abscounts.write.csv(output, header=True)
 	abscounts.write.parquet(output, mode='overwrite')
-#	collected=abscounts.collect()
-	
-#	print('collected')	
 
-#	with open('bigoutput.csv','wb') as outfile:
-#		writer = csv.writer(outfile)
-#		writer.writerow(abscounts.columns())
-#		for row in collected:
-#			this_row = [row[colname].encode("utf-8") for colname in abscounts.columns()]
-#			writer.writerow(this_row)
-					
 	
 def getdicts(filename):
 	boundarycount=0
@@ -117,9 +90,8 @@ def mysplit(s):
 	tokens=s.split()
 	return tokens
 
-
+#def getfreqs(text,broadcastDicts): 
 def getfreqs(text): 
-#	text=str(text)
 	counts={'0':0,'1':0, '2':0, '3':0,'4':0,'5':0,'6':0,'7':0,'8':0,'9':0,'10':0,'11':0,'12':0,'13':0,'14':0,'15':0,'16':0,'17':0,'18':0,'19':0,'20':0,'21':0,'22':0,'121':0,'122':0,'123':0,'124':0,'125':0,'126':0,'127':0,'128':0,'129':0,'130':0,'131':0,'132':0,'133':0,'134':0,'135':0,'136':0,'137':0,'138':0,'139':0,'140':0,'141':0,'142':0,'143':0,'146':0,'147':0,'148':0,'149':0,'150':0,'250':0,'251':0,'252':0,'253':0,'354':0,'355':0,'356':0,'357':0,'358':0,'359':0,'360':0,'462':0,'463':0,'464':0}
 
 	for word in text:
@@ -127,32 +99,34 @@ def getfreqs(text):
 		i=len(word)
 		while i>0:
 			try:
+#				for dict in broadcastDicts[word[:i]]:
 				for dict in DICTIONARIES[word[:i]]:
 					counts[dict]+=1
 				i=0 
 			except KeyError: 
 				i-=1
 		
-	print('completed get freqs')
+	print('\n\n\n completed get freqs \n\n\n')
 	return counts
 
-def calculatePosts2(posts, sc, ss):
+def calculatePosts2(posts, sc, ss, broadcastDicts):
 	getfreqsUDF = udf(getfreqs, MapType(StringType(), IntegerType()))
 	splitUDF = udf(mysplit, IntegerType())
-	print('\n\n\n dtypes inside calc posts')
-	print(posts.dtypes)
+
 	posts=posts.withColumn('splittext',splitUDF('selftext'))
 
 	#count words per dictionary
+#	countdict = posts.withColumn("counts", getfreqsUDF('splittext',broadcastDicts.value))
 	countdict = posts.withColumn("counts", getfreqsUDF('splittext'))
 	
-	#initialize new df without self text
-	tidyDF=countdict.select('id','subreddit','wordcount','counts')
+	#new df without self text
+	countdict=countdict.select('id','subreddit','wordcount','counts')
 	
 	#move counts from 'counts' column of dicts to wide columns
-	
 	for dict in DICTIONARIES['dictnames']:
-		tidyDF=tidyDF.withColumn(broadcastDicts['dictnames'][dict], tidyDF['counts'][dict]) 
+		tidyDF=countdict.withColumn(DICTIONARIES['dictnames'][dict], tidyDF['counts'][dict]) 
+#	for dict in broadcastDicts.value['dictnames']:
+#		tidyDF=countdict.withColumn(broadcastDicts.value['dictnames'][dict], tidyDF['counts'][dict]) 
 		print('added',dict) 
 	
 	#drop 'counts' column
@@ -165,16 +139,16 @@ def calculatePosts2(posts, sc, ss):
 	counts = counts.filter(counts['count(1)']>=100)
 	counts = counts.withColumn('postcounts',counts['count(1)']).drop('count(1)')
 
-
 	print('\n\n\n finished group with filter' )
-	print(counts.dtypes)
 
-	#initialize new df
+	#rename because past me didnt understand variables as pointers
 	tidyfreqDF=counts
 
 	#convert counts to frequencies
-	for dict in broadcastDicts['dictnames']:
-		dictname=broadcastDicts['dictnames'][dict]
+#	for dict in broadcastDicts.value['dictnames']:
+#		dictname=broadcastDicts.value['dictnames'][dict]
+	for dict in DICTIONARIES['dictnames']:
+		dictname=DICTIONARIES['dictnames'][dict]
 
 		tidyfreqDF=tidyfreqDF.withColumn(dictname+'freq', tidyfreqDF['sum('+dictname+')']/tidyfreqDF['sum(wordcount)'])
 
@@ -190,5 +164,3 @@ def calculatePosts2(posts, sc, ss):
 if __name__ == "__main__":
 	main()
  
-	bettercols=subRposts.select('id','subreddit','selftext',splitlenUDF('selftext').alias("wordcount"))
-
