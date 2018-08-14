@@ -1,10 +1,9 @@
 '''
 todo:
 address memory problems
-save smaller dataset
 improve splitting and prefix matching
-
 '''
+
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import size, split
@@ -46,7 +45,8 @@ def main():
 
 # freq
 	postRDD = spark.read.parquet(file)
-	abscounts = calculatePosts2(postRDD, sc, spark, broadcastDicts)
+#	abscounts = calculatePosts2(postRDD, sc, spark, broadcastDicts)
+	abscounts = calculatePosts2(postRDD, sc, spark)
 
 	abscounts.write.parquet(output, mode='overwrite')
 
@@ -109,7 +109,8 @@ def getfreqs(text):
 	print('\n\n\n completed get freqs \n\n\n')
 	return counts
 
-def calculatePosts2(posts, sc, ss, broadcastDicts):
+#def calculatePosts2(posts, sc, ss, broadcastDicts):
+def calculatePosts2(posts, sc, ss):
 	getfreqsUDF = udf(getfreqs, MapType(StringType(), IntegerType()))
 	splitUDF = udf(mysplit, IntegerType())
 
@@ -120,13 +121,13 @@ def calculatePosts2(posts, sc, ss, broadcastDicts):
 	countdict = posts.withColumn("counts", getfreqsUDF('splittext'))
 	
 	#new df without self text
-	countdict=countdict.select('id','subreddit','wordcount','counts')
+	tidyDF=countdict.select('id','subreddit','wordcount','counts')
 	
 	#move counts from 'counts' column of dicts to wide columns
 	for dict in DICTIONARIES['dictnames']:
-		tidyDF=countdict.withColumn(DICTIONARIES['dictnames'][dict], tidyDF['counts'][dict]) 
+		tidyDF=tidyDF.withColumn(DICTIONARIES['dictnames'][dict], tidyDF['counts'][dict]) 
 #	for dict in broadcastDicts.value['dictnames']:
-#		tidyDF=countdict.withColumn(broadcastDicts.value['dictnames'][dict], tidyDF['counts'][dict]) 
+#		tidyDF=tidyDF.withColumn(broadcastDicts.value['dictnames'][dict], tidyDF['counts'][dict]) 
 		print('added',dict) 
 	
 	#drop 'counts' column
@@ -147,6 +148,7 @@ def calculatePosts2(posts, sc, ss, broadcastDicts):
 	#convert counts to frequencies
 #	for dict in broadcastDicts.value['dictnames']:
 #		dictname=broadcastDicts.value['dictnames'][dict]
+
 	for dict in DICTIONARIES['dictnames']:
 		dictname=DICTIONARIES['dictnames'][dict]
 
@@ -156,7 +158,7 @@ def calculatePosts2(posts, sc, ss, broadcastDicts):
 		
 		print('added part 2',dict)
 		
-		tidyfreqDF = tidyfreqDF.withColumn('wordsum',tidyfreqDF['sum(wordcount)']).drop('sum(wordcount)')
+	tidyfreqDF = tidyfreqDF.withColumn('wordsum',tidyfreqDF['sum(wordcount)']).drop('sum(wordcount)')
 
 	#return DF of 111k rows (subreddits) by 60 columns (per dict freqs)
 	return tidyfreqDF
