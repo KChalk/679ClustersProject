@@ -23,7 +23,7 @@ def main():
 		.getOrCreate()
 
 	size = "medium"  # medium or large
-	if size == "large":
+	if size == "large": 
 		file = "l_filtered_posts.csv"
 		output="l_output"
 	elif size == "medium":
