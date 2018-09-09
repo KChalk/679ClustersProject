@@ -1,4 +1,4 @@
- 
+# large parquet in json out
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import size, split
@@ -9,20 +9,21 @@ from pyspark.sql.types import IntegerType, ArrayType, MapType, StringType
 from collections import defaultdict
 import csv
 
+from pyspark.ml.feature import StopWordsRemover
 from pyspark.ml.feature import CountVectorizer
 from pyspark.ml.clustering import LDA
 import codecs
 
-#from functools import partial
+#from functools import partial 
  
 def main(): 
     spark = SparkSession \
         .builder \
         .appName("Reddit: LDA") \
-        .config("spark.some.config.option", "some-value") \
-        .getOrCreate()
+        .config("spark.driver.maxResultSize", "2g") \
+        .getOrCreate() 
 
-    size = "medium"  # medium or large
+    size = "large"  # medium or large
     if size == "large":
         inp = "l_filtered_post_tokens"
         output="l_lda"
@@ -31,16 +32,21 @@ def main():
         #file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
         output="m_lda"
     else:
-        inp = "file:///g/chalkley/Winter18/679Clusters/Project/smallestinput"
+        inp = "file:///g/chalkley/Winter18/679Clusters/Project/Data/smallestinput"
         output="s_lda"
 
     sc = spark.sparkContext
 
-    postRDD = spark.read.json(inp+'.json')
-    #postRDD = spark.read.parquet(file+'.parquet')
+    #postRDD = spark.read.json(inp+'.json')
+    postRDD = spark.read.parquet(inp+'.parquet')
 
+    print('\n\n\n Removing Stopwords... \n\n\n')
+    remover=StopWordsRemover(inputCol='tokens', outputCol='nostops', stopWords=StopWordsRemover.loadDefaultStopWords('english'))
+    postRDD=remover.transform(postRDD)
+    
     print('\n\n\n vectorizing... \n\n\n')
-    cv=CountVectorizer(inputCol='tokens', outputCol='vectors')
+    cv=CountVectorizer(inputCol='nostops', outputCol='vectors',minTF=1.0, minDF=.001)
+    #cv=CountVectorizer(inputCol='tokens', outputCol='vectors',minTF=1.0, minDF=.001)
     vecModel=cv.fit(postRDD)
 
     print('\n\n\n Get Vocab... \n\n\n')
@@ -67,7 +73,7 @@ def main():
     print('\n\n\n Describe Topics... \n\n\n')
 
     topic_indices=lda_model.describeTopics(maxTermsPerTopic=30)
-    topic_indices.write.json(output+'_topics.json')
+    topic_indices.write.json(output+'_topics.json', mode='overwrite')
 
 
 if __name__ == "__main__":

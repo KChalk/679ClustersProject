@@ -2,18 +2,21 @@
 
 module load hadoop 
 
+#export PYSPARK_PYTHON=python3 
+
+spark-submit \
+    --master yarn \
+    --num-executors 200 \
+	--executor-memory 14g \
+	filterposts.py
+
 #spark-submit \
 #    --master yarn \
 #    --num-executors 200 \
 #	--executor-memory 14g \
-#	filterposts.py
+#	lda.py
 
-spark-submit \
-    --master yarn \
-    --num-executors 50 \
-	--executor-memory 6g \
-	lda.py
-
+#hadoop fs -getmerge l_lda_topics.json l_lda_topics.json
 
 #hadoop fs -rm -r l_output.csv
 #hadoop fs -rm -r m_output.csv

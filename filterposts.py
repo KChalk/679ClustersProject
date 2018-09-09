@@ -1,8 +1,8 @@
+# large parquet
 '''
-todo: 
+todo:  
 address memory problems 
 save smaller dataset
-improve splitting and prefix matching
 '''
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
@@ -13,7 +13,8 @@ from pyspark.sql.functions import udf
 from pyspark.sql.types import IntegerType, ArrayType, MapType, StringType
 from collections import defaultdict
 import csv
-import re
+import re 
+from string import punctuation
 
    
 def main():
@@ -23,7 +24,7 @@ def main():
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-	size = "medium"  # medium or large
+	size = "large"  # medium or large
 	if size == "large":
 		file = "RS_full_corpus.bz2"
 		output="l_filtered_post_tokens"
@@ -31,27 +32,33 @@ def main():
 		file = "RS_2017_11.bz2"
 		output="m_filtered_post_tokens"
 	else:
-		file = "file:///g/chalkley/Winter18/679Clusters/Project/redditexcerpt.txt"
+		file = "file:///g/chalkley/Winter18/679Clusters/Project/Data/redditexcerpt.txt"
 		output="s_filtered_post_tokens"
 
 	sc = spark.sparkContext
 # filter
 #	postRDD = filterPosts(file, sc, spark)
 	print('\n\n\n starting read and filter')
+	#filtered = smallfilterPostsAllSubs(file, sc, spark)
 	filtered = filterPostsAllSubs(file, sc, spark)
-	
+
+	print('\n\n\n Saving')
+
 	## Save posts
 	filtered.write.parquet(output+'.parquet', mode='overwrite')
+	#filtered.write.json(output+'.json', mode='overwrite')
 	#withvectors.write.json(output+'.json', mode='overwrite')
 
 def tokenize(s):
+	tokens=[]
 	s=s.strip().lower()
 	wordlist=re.split("[\s;,#]", s)
-	#the code below elimates any word containing an apostrophe or other punctuation
-	#for word in wordlist: 
-	#	if word.isalpha():
-	#		tokens.append(word)
-	return wordlist 
+	for word in wordlist: 
+		word=re.sub('^[\W\d]*','',word)
+		word=re.sub('[\W\d]*$','',word)
+		if word != '':
+			tokens.append(word)
+	return tokens
 
 def filterPostsAllSubs(filename, sc, ss):
 	#splitlenUDF = udf(splitlen, IntegerType()) 
@@ -65,65 +72,17 @@ def filterPostsAllSubs(filename, sc, ss):
 		.filter('wordcount >= 100')  
 	return longselfposts
 
-if __name__ == "__main__":
-	main()
- 
 
- 
-def main():
-	spark = SparkSession \
-		.builder \
-		.appName("Reddit:Filter posts") \
-		.config("spark.some.config.option", "some-value") \
-		.getOrCreate()
-
-	size = "medium"  # medium or large
-	if size == "large":
-		file = "RS_full_corpus.bz2"
-		output="l_filtered_post_tokens"
-	elif size == "medium":
-		file = "RS_2017_11.bz2"
-		output="m_filtered_post_tokens"
-	else:
-		file = "file:///g/chalkley/Winter18/679Clusters/Project/redditexcerpt.txt"
-		output="s_filtered_post_tokens"
-
-	sc = spark.sparkContext
-# filter
-#	postRDD = filterPosts(file, sc, spark)
-	print('\n\n\n starting read and filter')
-	filtered = filterPostsAllSubs(file, sc, spark)
-
-
-	## Save posts
-#	filtered.write.parquet(output, mode='overwrite')
-	filtered.write.json(output+'.json', mode='overwrite')
-
-def tokenize(s):
-	s=s.strip().lower()
-	wordlist=re.split("[\s;,#]", s)
-	#the code below elimates any word containing an apostrophe or other punctuation
-	#for word in wordlist: 
-	#	if word.isalpha():
-	#		tokens.append(word)
-	return wordlist 
-
-def filterPostsAllSubs(filename, sc, ss):
-	
+def smallfilterPostsAllSubs(filename, sc, ss):
 	#splitlenUDF = udf(splitlen, IntegerType()) 
 	tokensUDF = udf(tokenize, ArrayType(StringType())) 
-	
 	alldata = ss.read.json(filename)
-
 	#remove links to external content from data
 	longselfposts = alldata		\
 		.filter(alldata['is_self'] == True) 	\
 		.select('id','subreddit',tokensUDF('selftext').alias("tokens"))	\
-		.withColumn('wordcount', size('tokens'))	\
-		.filter('wordcount >= 100') 
-
+		.withColumn('wordcount', size('tokens'))
 	return longselfposts
 
 if __name__ == "__main__":
 	main()
- 
