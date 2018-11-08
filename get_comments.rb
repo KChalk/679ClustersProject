@@ -122,7 +122,16 @@ comment_filenames = ["RC_2007-10.bz2",
 "RC_2017-09.bz2",
 "RC_2017-10.bz2",
 "RC_2017-11.bz2",
-"RC_2017-12.xz"
+"RC_2017-12.xz",
+"RC_2018-01.xz",
+"RC_2018-02.xz",
+"RC_2018-03.xz",
+"RC_2018-04.xz",
+"RC_2018-05.xz",
+"RC_2018-06.xz",
+"RC_2018-07.xz",
+"RC_2018-08.xz",
+"RC_2018-09.xz"
 ]
 
 comment_filenames.each do |c|
