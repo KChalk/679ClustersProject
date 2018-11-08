@@ -1,4 +1,4 @@
-base_url = "http://files.pushshift.io/reddit/submissions/"
+base_url = "http://files.pushshift.io/reddit/comments/"
 
 comment_filenames = ["RC_2007-10.bz2",
 "RC_2007-11.bz2",
