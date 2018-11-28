@@ -1,19 +1,19 @@
-# Large
+# m
 
 import json
 
 vocab=[]
 
-nterms=15
+nterms=30
 
-with open('l_lda_vocab.txt') as f: 
+with open('m_lda_vocab.txt') as f: 
     for line in f: 
         vocab.append(line.strip())
 
 #print(vocab[:15])
 
 topics=[]
-with open('l_lda_topics.json') as f: 
+with open('m_lda_topics.json') as f: 
     for line in f: 
         topics.append(json.loads(line))
 
@@ -26,4 +26,3 @@ for topic in topics:
         topic['terms'][i]=vocab[index]
         #print(topic['terms'][i],':%.4f' % (float(topic['termWeights'][i])*100))
     print(topic['terms'])
- 

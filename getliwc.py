@@ -1,6 +1,6 @@
-# large
-'''
-todo: 
+# m
+''' 
+todo:
 address memory problems
 improve splitting and prefix matching
 '''
@@ -23,12 +23,12 @@ def main():
 		.config("spark.some.config.option", "some-value") \
 		.getOrCreate()
 
-	size = "large"  # medium or large
+	size = "medium"  # medium or large
 	if size == "large": 
 		file = "l_filtered_post_tokens"
 		output="l_freqs"
 	elif size == "medium":
-		file = "m__filtered_post_tokens"
+		file = "m_filtered_post_tokens"
 		#file = "file:///g/chalkley/Winter18/679Clusters/Project/m_filtered_posts.csv"
 		output="m_freqs"
 
@@ -49,7 +49,7 @@ def main():
 #	abscounts = calculatePosts2(postRDD, sc, spark, broadcastDicts)
 	abscounts = calculatePosts2(postRDD, sc, spark)
 
-	abscounts.write.csv(output+'.csv', mode='overwrite')
+	abscounts.write.csv(output+'.csv', mode='overwrite', header=True)
 
 	
 def getdicts(filename):
@@ -92,7 +92,6 @@ def getfreqs(text):
 	counts={'0':0,'1':0, '2':0, '3':0,'4':0,'5':0,'6':0,'7':0,'8':0,'9':0,'10':0,'11':0,'12':0,'13':0,'14':0,'15':0,'16':0,'17':0,'18':0,'19':0,'20':0,'21':0,'22':0,'121':0,'122':0,'123':0,'124':0,'125':0,'126':0,'127':0,'128':0,'129':0,'130':0,'131':0,'132':0,'133':0,'134':0,'135':0,'136':0,'137':0,'138':0,'139':0,'140':0,'141':0,'142':0,'143':0,'146':0,'147':0,'148':0,'149':0,'150':0,'250':0,'251':0,'252':0,'253':0,'354':0,'355':0,'356':0,'357':0,'358':0,'359':0,'360':0,'462':0,'463':0,'464':0}
 
 	for word in text:
-		word=word.lower()
 		i=len(word)
 		while i>0:
 			try:
@@ -101,11 +100,9 @@ def getfreqs(text):
 					counts[d]+=1
 				i=0 
 			except KeyError: 
-				i-=1
-		
+				i-=1		
 	return counts
 
-#def calculatePosts2(posts, sc, ss, broadcastDicts):
 def calculatePosts2(posts, sc, ss):
 	getfreqsUDF = udf(getfreqs, MapType(StringType(), IntegerType()))
 

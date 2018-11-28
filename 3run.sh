@@ -1,14 +1,14 @@
 #!/bin/bash 
 
-module load hadoop 
+module load hadoop
 
 #export PYSPARK_PYTHON=python3 
 
-spark-submit \
-    --master yarn \
-    --num-executors 200 \
-	--executor-memory 14g \
-	filterposts.py
+#spark-submit \
+#    --master yarn \
+#    --num-executors 200 \
+#	--executor-memory 14g \
+#	filterposts.py
 
 #spark-submit \
 #    --master yarn \
@@ -26,7 +26,20 @@ spark-submit \
 #    --master yarn \
 #    --num-executors 200 \
 #	--executor-memory 14g \
-#	getliwc.py
+#	getabs.py
+
+spark-submit \
+   --master yarn \
+   --num-executors 100 \
+	--executor-memory 6g \
+        cluster.py
+
+#spark-submit \
+#    --master yarn \
+#    --num-executors 200 \
+#        --executor-memory 14g \
+#        getliwc.py
+
 #hadoop fs -getmerge l_output.csv l_output.csv
 #hadoop fs -getmerge m_output.csv m_output.csv
 #hadoop fs -getmerge s_output_posts.csv s_output.csv
