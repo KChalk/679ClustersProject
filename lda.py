@@ -72,8 +72,8 @@ def main():
     
     print('\n\n\n Describe Topics... \n\n\n')
 
-    topic_indices=lda_model.describeTopics(maxTermsPerTopic=30)
-    topic_indices.write.json(output+'_topics.json', mode='overwrite')
+    topic_matrix=lda_model.topic_matrix()
+    topic_matrix.write.json(output+'_topics.json', mode='overwrite')
 
 
 if __name__ == "__main__":
